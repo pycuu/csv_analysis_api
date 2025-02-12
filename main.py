@@ -6,7 +6,7 @@ import uvicorn
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_squared_error
 from sklearn.metrics import mean_absolute_error
-
+#asd
 app = FastAPI()
 
 # this is for testing, delete later

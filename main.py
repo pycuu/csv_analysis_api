@@ -27,15 +27,75 @@ async def upload_csv(file: UploadFile = File(...)):
     return {"filename": file.filename, "head": head}
 
 
-
-@app.post("/linear_regression/")
-async def linear_regression(file: UploadFile = File(...), x_col: str = Form(...), y_col: str = Form(...)):
+@app.post("/mean_value/")
+async def mean_column(file: UploadFile = File(...), column: str = Form(...)):
     contents = await file.read()
     df = pd.read_csv(io.StringIO(contents.decode("utf-8")))
 
+    if column not in df.columns:
+        return {"error": "Column not found in the dataset"}
+
+    mean = df[column].mean()
+    return {"mean_value": mean}
+
+
+
+@app.post("/median_value/")
+async def mean_column(file: UploadFile = File(...), column: str = Form(...)):
+    contents = await file.read()
+    df = pd.read_csv(io.StringIO(contents.decode("utf-8")))
+
+    if column not in df.columns:
+        return {"error": "Column not found in the dataset"}
+
+    median = df[column].median()
+    return {"median_value": median}
+
+
+
+
+@app.post("/standard_deviation/")
+async def mean_column(file: UploadFile = File(...), column: str = Form(...)):
+    contents = await file.read()
+    df = pd.read_csv(io.StringIO(contents.decode("utf-8")))
+
+    if column not in df.columns:
+        return {"error": "Column not found in the dataset"}
+
+    #x = df[column]
+    #std_dev = pow((abs(pow(x-(x.mean()),2))).mean(),(1/2))
+    std_dev = df[column].std(ddof=0)
+    return {"standard_deviation": std_dev}
+
+
+# Pearson correlation, (-1, 1)
+# Close to 0 means no correlation
+@app.post("/correlation/")
+async def correlation(file: UploadFile = File(...), x_column: str = Form(...), y_column: str = Form(...)):
+    contents = await file.read()
+    df = pd.read_csv(io.StringIO(contents.decode("utf-8")))
+    
+    if x_column not in df.columns or y_column not in df.columns:
+        return {"error": "One or both columns not found in the dataset"}
+    
+    correlation_value = df[x_column].corr(df[y_column])
+
+    return {"correlation": correlation_value}
+
+
+
+
+@app.post("/linear_regression/")
+async def linear_regression(file: UploadFile = File(...), x_column: str = Form(...), y_column: str = Form(...)):
+    contents = await file.read()
+    df = pd.read_csv(io.StringIO(contents.decode("utf-8")))
+
+    if x_column not in df.columns or y_column not in df.columns:
+        return {"error": "One or both columns not found in the dataset"}
+
     # linear regression
-    X=df[[x_col]].values
-    y=df[y_col].values
+    X=df[[x_column]].values
+    y=df[y_column].values
     model = LinearRegression()
     model.fit(X, y)
     slope = model.coef_[0]
@@ -51,8 +111,8 @@ async def linear_regression(file: UploadFile = File(...), x_col: str = Form(...)
 
     output_json = {
         "filename": file.filename,
-        "x_column": x_col,
-        "y_column": y_col,
+        "x_column": x_column,
+        "y_column": y_column,
         "linear_regression": {
             "slope": slope,
             "intercept": intercept,

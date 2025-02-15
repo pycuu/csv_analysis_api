@@ -40,7 +40,7 @@ async def mean_column(file: UploadFile = File(...), column: str = Form(...)):
 
 
 
-@app.post("/median_value/")
+@app.post("/median_value/") 
 async def mean_column(file: UploadFile = File(...), column: str = Form(...)):
     contents = await file.read()
     df = pd.read_csv(io.StringIO(contents.decode("utf-8")))

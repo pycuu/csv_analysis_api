@@ -15,7 +15,7 @@ if __name__ == "__main__":
 
 
 
-# this one is useless, also for testing (since we use POST for every request)
+# this one is useless, also for testing (no need to upload the csv since we inclued it in every request)
 @app.post("/upload-csv/")
 async def upload_csv(file: UploadFile = File(...)):
     contents = await file.read()
@@ -26,7 +26,7 @@ async def upload_csv(file: UploadFile = File(...)):
 
     return {"filename": file.filename, "head": head}
 
-
+# mean value of a column
 @app.post("/mean_value/")
 async def mean_column(file: UploadFile = File(...), column: str = Form(...)):
     contents = await file.read()
@@ -39,7 +39,7 @@ async def mean_column(file: UploadFile = File(...), column: str = Form(...)):
     return {"mean_value": mean}
 
 
-
+# median value of a column
 @app.post("/median_value/") 
 async def mean_column(file: UploadFile = File(...), column: str = Form(...)):
     contents = await file.read()
@@ -53,7 +53,7 @@ async def mean_column(file: UploadFile = File(...), column: str = Form(...)):
 
 
 
-
+# standard deviation of a column
 @app.post("/standard_deviation/")
 async def mean_column(file: UploadFile = File(...), column: str = Form(...)):
     contents = await file.read()
@@ -84,7 +84,55 @@ async def correlation(file: UploadFile = File(...), x_column: str = Form(...), y
 
 
 
+# linear regression
+# TODO: add the other parameters
+@app.post("/linear_regression_handmade/")
+async def linear_regression_hand(file: UploadFile = File(...), x_column: str = Form(...), y_column: str = Form(...)):
+    contents = await file.read()
+    df = pd.read_csv(io.StringIO(contents.decode("utf-8")))
 
+    if x_column not in df.columns or y_column not in df.columns:
+        return {"error": "One or both columns not found in the dataset"}
+
+    X_mean = df[x_column].mean()
+    y_mean = df[y_column].mean()
+
+    X_deviations = df[x_column] - X_mean
+    y_deviations = df[y_column] - y_mean
+
+    numerator = sum(X_deviations * y_deviations)
+    denominator = sum(X_deviations ** 2)
+
+    if denominator == 0:
+        return {"error": "Denominator is zero, cannot compute slope"}
+
+    regression_slope = numerator / denominator
+
+    if np.isnan(regression_slope):
+        return {"error": "Calculation resulted in NaN"}
+    
+
+    regression_intercept = y_mean - regression_slope*X_mean
+
+    output_json = {
+        "filename": file.filename,
+        "x_column": x_column,
+        "y_column": y_column,
+        "linear_regression": {
+            "slope": regression_slope,
+            "intercept": regression_intercept,
+            # "r_squared": r_squared,
+            # "mean_squared_error": mse,
+            # "root_mean_squared_error": rmse,
+            # "mean_absolute_error": mae
+        }
+    }
+    return output_json
+
+
+
+
+# linear regression from sklearn for comparing
 @app.post("/linear_regression/")
 async def linear_regression(file: UploadFile = File(...), x_column: str = Form(...), y_column: str = Form(...)):
     contents = await file.read()

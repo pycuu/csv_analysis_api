@@ -24,8 +24,8 @@ The API supports the following operations:
 To run the application locally:
 ```bash
 # Clone the repository
-git clone https://github.com/your-username/your-repo.git
-cd your-repo
+git clone https://github.com/pycuu/csv_analysis_api.git
+cd csv_analysis_api
 
 # Install dependencies
 pip install -r requirements.txt

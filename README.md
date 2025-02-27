@@ -4,7 +4,7 @@
 Data Analysis API is a Python application built with FastAPI that allows users to analyze numerical data from uploaded CSV files. The API provides statistical calculations without relying on any machine learning libraries.
 
 ## Features
-The API supports the following operations:
+The API supports the following operations (for now):
 - Calculating the mean value of a selected column (`/mean_value/`)
 - Calculating the median (`/median_value/`)
 - Calculating the standard deviation (`/standard_deviation/`)

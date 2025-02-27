@@ -1,34 +1,21 @@
 from fastapi import FastAPI, File, UploadFile, Form
+from typing import Dict, Any
 import pandas as pd
 import numpy as np
 import io
 import uvicorn
-from sklearn.linear_model import LinearRegression
-from sklearn.metrics import mean_squared_error
-from sklearn.metrics import mean_absolute_error
-
+import seaborn as sns
+import matplotlib.pyplot as plt
 app = FastAPI()
 
-# this is for testing, delete later
+
 if __name__ == "__main__":
     uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True)
 
 
-
-# this one is useless, also for testing (no need to upload the csv since we inclued it in every request)
-@app.post("/upload-csv/")
-async def upload_csv(file: UploadFile = File(...)):
-    contents = await file.read()
-    df = pd.read_csv(io.StringIO(contents.decode("utf-8")))
-
-    head = df.head().to_dict(orient="records")
-    
-
-    return {"filename": file.filename, "head": head}
-
 # mean value of a column
 @app.post("/mean_value/")
-async def mean_column(file: UploadFile = File(...), column: str = Form(...)):
+async def mean_column(file: UploadFile = File(...), column: str = Form(...)) -> Dict[str, Any]:
     contents = await file.read()
     df = pd.read_csv(io.StringIO(contents.decode("utf-8")))
 
@@ -41,7 +28,7 @@ async def mean_column(file: UploadFile = File(...), column: str = Form(...)):
 
 # median value of a column
 @app.post("/median_value/") 
-async def mean_column(file: UploadFile = File(...), column: str = Form(...)):
+async def mean_column(file: UploadFile = File(...), column: str = Form(...)) -> Dict[str, Any]:
     contents = await file.read()
     df = pd.read_csv(io.StringIO(contents.decode("utf-8")))
 
@@ -55,23 +42,22 @@ async def mean_column(file: UploadFile = File(...), column: str = Form(...)):
 
 # standard deviation of a column
 @app.post("/standard_deviation/")
-async def mean_column(file: UploadFile = File(...), column: str = Form(...)):
+async def mean_column(file: UploadFile = File(...), column: str = Form(...)) -> Dict[str, Any]:
     contents = await file.read()
     df = pd.read_csv(io.StringIO(contents.decode("utf-8")))
 
     if column not in df.columns:
         return {"error": "Column not found in the dataset"}
 
-    #x = df[column]
-    #std_dev = pow((abs(pow(x-(x.mean()),2))).mean(),(1/2))
+    #std_dev = (abs(pow(df[column]-(df[column].mean()),2))).mean()**(1/2)
     std_dev = df[column].std(ddof=0)
     return {"standard_deviation": std_dev}
 
 
 # Pearson correlation, (-1, 1)
 # Close to 0 means no correlation
-@app.post("/correlation/")
-async def correlation(file: UploadFile = File(...), x_column: str = Form(...), y_column: str = Form(...)):
+@app.post("/pearson_correlation/")
+async def correlation(file: UploadFile = File(...), x_column: str = Form(...), y_column: str = Form(...)) -> Dict[str, Any]:
     contents = await file.read()
     df = pd.read_csv(io.StringIO(contents.decode("utf-8")))
     
@@ -83,21 +69,20 @@ async def correlation(file: UploadFile = File(...), x_column: str = Form(...), y
     return {"correlation": correlation_value}
 
 
-
 # linear regression
-# TODO: add the other parameters
-@app.post("/linear_regression_handmade/")
-async def linear_regression_hand(file: UploadFile = File(...), x_column: str = Form(...), y_column: str = Form(...)):
+@app.post("/linear_regression/")
+async def linear_regression(file: UploadFile = File(...), X_column: str = Form(...), y_column: str = Form(...)) -> Dict[str, Any]:
     contents = await file.read()
     df = pd.read_csv(io.StringIO(contents.decode("utf-8")))
+    
 
-    if x_column not in df.columns or y_column not in df.columns:
+    if X_column not in df.columns or y_column not in df.columns:
         return {"error": "One or both columns not found in the dataset"}
 
-    X_mean = df[x_column].mean()
+    X_mean = df[X_column].mean()
     y_mean = df[y_column].mean()
 
-    X_deviations = df[x_column] - X_mean
+    X_deviations = df[X_column] - X_mean
     y_deviations = df[y_column] - y_mean
 
     numerator = sum(X_deviations * y_deviations)
@@ -114,61 +99,49 @@ async def linear_regression_hand(file: UploadFile = File(...), x_column: str = F
 
     regression_intercept = y_mean - regression_slope*X_mean
 
+
+    ss_tot = sum((df[y_column]-y_mean)**2)
+    ss_res = sum((df[y_column] - (regression_slope * df[X_column] + regression_intercept)) ** 2)
+
+    if ss_tot == 0:
+        return {"error": "ss_tot is zero, cannot compute r_squared"}
+
+    r_squared = 1-(ss_res/ss_tot)
+
+
+    mean_squared_error = sum((df[y_column]-(regression_slope * df[X_column] + regression_intercept))**2)/df.shape[0]
+    root_mean_squared_error = mean_squared_error**(1/2)
+
+    mean_absolute_error = sum(abs(df[y_column]-(regression_slope * df[X_column] + regression_intercept)))/df.shape[0]
+
     output_json = {
         "filename": file.filename,
-        "x_column": x_column,
+        "x_column": X_column,
         "y_column": y_column,
         "linear_regression": {
             "slope": regression_slope,
             "intercept": regression_intercept,
-            # "r_squared": r_squared,
-            # "mean_squared_error": mse,
-            # "root_mean_squared_error": rmse,
-            # "mean_absolute_error": mae
+            "r_squared": r_squared,
+            "mean_squared_error": mean_squared_error,
+            "root_mean_squared_error": root_mean_squared_error,
+            "mean_absolute_error": mean_absolute_error
         }
     }
     return output_json
 
 
 
-
-# linear regression from sklearn for comparing
-@app.post("/linear_regression/")
-async def linear_regression(file: UploadFile = File(...), x_column: str = Form(...), y_column: str = Form(...)):
+# correlation matrix
+@app.post("/correlation_matrix/")
+async def correlation_matrix(file: UploadFile = File(...)) -> Dict[str, Any]:
     contents = await file.read()
     df = pd.read_csv(io.StringIO(contents.decode("utf-8")))
 
-    if x_column not in df.columns or y_column not in df.columns:
-        return {"error": "One or both columns not found in the dataset"}
+    numeric_df = df.select_dtypes(include=[np.number])
 
-    # linear regression
-    X=df[[x_column]].values
-    y=df[y_column].values
-    model = LinearRegression()
-    model.fit(X, y)
-    slope = model.coef_[0]
-    intercept = model.intercept_
+    if numeric_df.empty:
+        return {"error": "No numeric columns found in the dataset"}
 
-    # additional analysis
-    r_squared = model.score(X, y)
-    y_pred = model.predict(X)
-    #residuals = (y - y_pred).tolist()
-    mse = mean_squared_error(y, y_pred)
-    rmse = np.sqrt(mse)
-    mae = mean_absolute_error(y, y_pred)
+    correlation_matrix = numeric_df.corr().to_dict()
 
-    output_json = {
-        "filename": file.filename,
-        "x_column": x_column,
-        "y_column": y_column,
-        "linear_regression": {
-            "slope": slope,
-            "intercept": intercept,
-            "r_squared": r_squared,
-            "mean_squared_error": mse,
-            "root_mean_squared_error": rmse,
-            "mean_absolute_error": mae
-        }
-    }
-
-    return output_json
+    return {"correlation_matrix": correlation_matrix}

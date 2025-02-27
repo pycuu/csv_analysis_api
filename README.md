@@ -83,7 +83,6 @@ curl -X 'POST' \
 }
 ```
 
-## Notes
 - This API does **not** use any machine learning libraries such as scikit-learn or TensorFlow. All calculations are performed using fundamental statistical formulas.
 - The API only works with numerical data columns.
 - Ensure that your CSV file contains valid numerical data before making requests.
